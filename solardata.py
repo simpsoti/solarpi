@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import solaredge
-import json
 
 class SolarData:
     def __init__(self, api_key, site_id):
