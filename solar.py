@@ -33,6 +33,7 @@ pushover_token = ""
 pushover_userkey = ""
 solaredge_apikey = ""
 solaredge_siteid = ""
+city_name = ""
 
 with open('config.json') as config_file:
     data = json.load(config_file)
@@ -40,6 +41,7 @@ with open('config.json') as config_file:
     pushover_userkey = data['pushover_userkey']
     solaredge_apikey = data['solaredge_apikey']
     solaredge_siteid = data['solaredge_siteid']
+    city_name = data['city_name']
     
 init(pushover_token)
 
@@ -379,7 +381,6 @@ def DrawSun(r, g, b):
 def SunShining():
     a = Astral()
     a.solar_depression = 'civil'
-    city_name = 'Denver'
     city = a[city_name]
     #logging.info(city)
     now = pytz.utc.localize(datetime.now())
