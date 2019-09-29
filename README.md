@@ -5,18 +5,18 @@ You will need to provide your own keys/ids for the Pushover and SolarEdge web-AP
 
 You will need to make sure the following python 3 modules are installed to be able to run the script:
 
-solaredge
-datetime
-pytz
-astral import
-schedule
-time
-logging
-unicornhathd
-signal
-colorsys
-PIL
-pushover
-json
+solaredge<br/>
+datetime<br/>
+pytz<br/>
+astral<br/>
+schedule<br/>
+time<br/>
+logging<br/>
+unicornhathd<br/>
+signal<br/>
+colorsys<br/>
+PIL<br/>
+pushover<br/>
+json<br/>
 
 This program will display scrolling output of a sun graphic, the current power being generated and the energy generated so far that day.  A log file will be written in same directory as the python files. Every hour that the sun is up a notification will be sent via Pushover.
