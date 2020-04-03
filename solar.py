@@ -56,6 +56,15 @@ def SendPushNotification():
     logger.info("Push Notification:")
     logger.info(message)
     Client(pushover_userkey).send_message(message, title="Solar Production")
+    
+def SendErrorPushNotification():
+    nl = "\n"
+    error = "Production Error"
+    current = "Power " + str(push_power) + power_units
+    message = TimeStamp() + nl + error + nl + current
+    logger.info("Push Notification - Error:")
+    logger.info(message)
+    Client(pushover_userkey).send_message(message, title="Solar Production Error")  
 
 
 def OutputText(energy, power, r, g, b):
@@ -398,10 +407,10 @@ def TruncateDateTime(dt):
     return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 
 def LogSun(city, sunrise, sunset, now):
-    logger.info(city)
-    logger.info(sunrise)
-    logger.info(sunset)
-    logger.info(now)
+    logger.info("Location: " + str(city))
+    logger.info("Sunrise: " + str(sunrise))
+    logger.info("Sunset: " + str(sunset))
+
 
 def GetSolarData():
     logger.info("Getting solar data")
@@ -411,7 +420,9 @@ def GetSolarData():
     logger.info("Lifetime energy produced is " + str(solarData.lifetime_energy()) + energy_units)
     logger.info("Energy produced this year is " + str(solarData.last_year_energy()) + energy_units)
     logger.info("Energy produced today is " + str(energy) + energy_units)
-    logger.info("Current power is " + str(power) + power_units)
+    now = pytz.utc.localize(datetime.now())
+    now_trunc = TruncateDateTime(now)
+    logger.info(str(now_trunc) + " - Current power is " + str(power) + power_units)
     return energy, power
 
 def GetColor(power):
@@ -471,17 +482,18 @@ def ShouldRun():
 solarDataJob = schedule.every(5).minutes.do(GetSolarData)
 pushNotificationJob = schedule.every(1).hours.do(SendPushNotification)
 
+try:
+    #prime the pump
+    energy = 0
+    power = 0
+    r = 0
+    g = 0
+    b = 0
+    logger.info("Restart - " + TimeStamp() )
+    energy, power, r, g, b = ProcessSolar(True, energy, power, r, g, b)
 
-#prime the pump
-energy = 0
-power = 0
-r = 0
-g = 0
-b = 0
-logger.info("Restart - " + TimeStamp() )
-energy, power, r, g, b = ProcessSolar(True, energy, power, r, g, b)
-
-while True:
-    energy, power, r, g, b = ProcessSolar(ShouldRun(), energy, power, r, g, b)
-
+    while True:
+        energy, power, r, g, b = ProcessSolar(ShouldRun(), energy, power, r, g, b)
+except Exception as e:
+    logger.exception("Solar service crashed. Error: %s", e) 
 
