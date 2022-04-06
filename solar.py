@@ -35,7 +35,7 @@ solaredge_apikey = ""
 solaredge_siteid = ""
 city_name = ""
 
-with open('../config.json') as config_file:
+with open('solarpi_config/config.json') as config_file:
     data = json.load(config_file)
     pushover_token = data['pushover_token']
     pushover_userkey = data['pushover_userkey']
