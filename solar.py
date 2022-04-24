@@ -454,27 +454,33 @@ def GetColor(power):
 def ProcessSolar(getData, energy, power, r, g, b):
     shining, city, sunrise, sunset, now = SunShining()
     global push_energy
-    global push_power 
-    if getData:
-        LogSun(city, sunrise, sunset, now)
-        energy, power = solarDataJob.run()
-        r, g, b = GetColor(power)
+    global push_power
+    timeout = 600 #10 minutes
+    try:
+        if getData:
+            LogSun(city, sunrise, sunset, now)
+            energy, power = solarDataJob.run()
+            r, g, b = GetColor(power)
 
-    if shining:
-        DrawSun(r, g, b)
-        if pushNotificationJob.should_run:
-            push_energy = energy
-            push_power = power
-            #print(str(push_energy) + " " + str(push_power))
-            pushNotificationJob.run()
-    elif power > 0:
-        logger.info("Clean up edge case where power not zero very close to sunset.")
-        logger.info("Edge Case Power: " + str(power) + power_units)
-        power = 0
-        r, g, b = GetColor(power)
-    OutputText(energy, power, r, g, b)
-    return energy, power, r, g, b
-
+        if shining:
+            DrawSun(r, g, b)
+            if pushNotificationJob.should_run:
+                push_energy = energy
+                push_power = power
+                #print(str(push_energy) + " " + str(push_power))
+                pushNotificationJob.run()
+        elif power > 0:
+            logger.info("Clean up edge case where power not zero very close to sunset.")
+            logger.info("Edge Case Power: " + str(power) + power_units)
+            power = 0
+            r, g, b = GetColor(power)
+        OutputText(energy, power, r, g, b)
+        return energy, power, r, g, b
+    except Exception as e:
+        logger.exception("Error: Trying again after %d minutes. %s", timeout/60, e)
+        sleep(timeout)
+        return
+    
 def ShouldRun():
     shining, city, sunrise, sunset, now = SunShining()
     return shining and solarDataJob.should_run
