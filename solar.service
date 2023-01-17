@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/usr/bin/python3 -u solar.py
-WorkingDirectory=/home/pi
+WorkingDirectory=/home/pi/solarpi
 StandardOutput=inherit
 StandardError=inherit
 Restart=always

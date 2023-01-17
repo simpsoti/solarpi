@@ -3,7 +3,7 @@
 from solardata import SolarData
 from datetime import datetime, timezone
 import pytz
-from astral import Astral
+from suntime import Sun
 import schedule
 import time
 import logging
@@ -12,13 +12,15 @@ import unicornhathd
 import signal
 import colorsys
 from PIL import Image, ImageDraw, ImageFont
-from pushover import init, Client
+import pushover 
 import json
 
 logger = logging.getLogger("Rotating Log")
 logger.setLevel(logging.INFO)
 handler = RotatingFileHandler('solar.log', maxBytes=10*1024*1024, backupCount=5)
 logger.addHandler(handler)
+
+client = pushover.PushoverClient("solarpi_config/solarpi.pushover")
 
 b = 0.4
 unicornhathd.rotation(90)
@@ -37,13 +39,13 @@ city_name = ""
 
 with open('solarpi_config/config.json') as config_file:
     data = json.load(config_file)
-    pushover_token = data['pushover_token']
-    pushover_userkey = data['pushover_userkey']
     solaredge_apikey = data['solaredge_apikey']
     solaredge_siteid = data['solaredge_siteid']
+    latitude = data['latitude']
+    longitude = data['longitude']
     city_name = data['city_name']
     
-init(pushover_token)
+#init(pushover_token)
 
 def TimeStamp():
     return datetime.today().strftime("%m/%d/%y %I:%M:%S %p")
@@ -55,7 +57,7 @@ def SendPushNotification():
     message = TimeStamp() + nl + today + nl + current
     logger.info("Push Notification:")
     logger.info(message)
-    Client(pushover_userkey).send_message(message, title="Solar Production")
+    client.send_message(message, title="Solar Production")
     
 def SendErrorPushNotification():
     nl = "\n"
@@ -64,7 +66,7 @@ def SendErrorPushNotification():
     message = TimeStamp() + nl + error + nl + current
     logger.info("Push Notification - Error:")
     logger.info(message)
-    Client(pushover_userkey).send_message(message, title="Solar Production Error")  
+    client.send_message(message, title="Solar Production Error")  
 
 
 def OutputText(energy, power, r, g, b):
@@ -388,20 +390,17 @@ def DrawSun(r, g, b):
     time.sleep(2.0)
 
 def SunShining():
-    a = Astral()
-    a.solar_depression = 'civil'
-    city = a[city_name]
-    #logging.info(city)
     now = pytz.utc.localize(datetime.now())
-    sun = city.sun(date=now, local=True)
-    sunrise = sun['sunrise']
-    sunset = sun['sunset']
     now_trunc = TruncateDateTime(now)
+    sun = Sun(float(latitude), float(longitude))
+    sunrise = sun.get_local_sunrise_time(now)
+    sunset = sun.get_local_sunset_time(now)
     sunrise_trunc = TruncateDateTime(sunrise)
     sunset_trunc = TruncateDateTime(sunset)
     shining = now_trunc > sunrise_trunc and now_trunc < sunset_trunc
+    #print(shining)
+    return shining, sunrise_trunc, sunset_trunc, now_trunc
 
-    return shining, city, sunrise_trunc, sunset_trunc, now_trunc
 
 def TruncateDateTime(dt):
     return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
@@ -452,13 +451,13 @@ def GetColor(power):
     return r, g, b
 
 def ProcessSolar(getData, energy, power, r, g, b):
-    shining, city, sunrise, sunset, now = SunShining()
+    shining, sunrise, sunset, now = SunShining()
     global push_energy
     global push_power
     timeout = 600 #10 minutes
     try:
         if getData:
-            LogSun(city, sunrise, sunset, now)
+            LogSun(city_name, sunrise, sunset, now)
             energy, power = solarDataJob.run()
             r, g, b = GetColor(power)
 
@@ -478,12 +477,15 @@ def ProcessSolar(getData, energy, power, r, g, b):
         return energy, power, r, g, b
     except Exception as e:
         logger.exception("Error: Trying again after %d minutes. %s", timeout/60, e)
-        sleep(timeout)
+        time.sleep(timeout)
         return
     
 def ShouldRun():
-    shining, city, sunrise, sunset, now = SunShining()
-    return shining and solarDataJob.should_run
+    shining, sunrise, sunset, now = SunShining()
+    should_run = shining and solarDataJob.should_run
+    print("Is Shining: " + str(shining))
+    print("Should run: " + str(should_run))
+    return should_run
 
 solarDataJob = schedule.every(5).minutes.do(GetSolarData)
 pushNotificationJob = schedule.every(1).hours.do(SendPushNotification)
@@ -497,7 +499,6 @@ try:
     b = 0
     logger.info("Restart - " + TimeStamp() )
     energy, power, r, g, b = ProcessSolar(True, energy, power, r, g, b)
-
     while True:
         energy, power, r, g, b = ProcessSolar(ShouldRun(), energy, power, r, g, b)
 except Exception as e:
