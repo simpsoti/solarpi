@@ -1,7 +1,0 @@
-{
-  "pushover_token" : "<your pushover token>",
-  "pushover_userkey" : "<your pushover user key>",
-  "solaredge_apikey" : "<your solaredge api key>",
-  "solaredge_siteid" : "<your solaredge site id>",
-  "city_name" : "<your city>"
-}
