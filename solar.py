@@ -3,7 +3,9 @@
 from solardata import SolarData
 from datetime import datetime, timezone
 import pytz
-from suntime import Sun
+from astral import LocationInfo
+from astral.sun import sun
+import zoneinfo
 import schedule
 import time
 import logging
@@ -44,6 +46,7 @@ with open('solarpi_config/config.json') as config_file:
     latitude = data['latitude']
     longitude = data['longitude']
     city_name = data['city_name']
+    time_zone = data['time_zone']
     
 #init(pushover_token)
 
@@ -389,18 +392,23 @@ def DrawSun(r, g, b):
     unicornhathd.show()
     time.sleep(2.0)
 
+
 def SunShining():
     now = pytz.utc.localize(datetime.now())
     now_trunc = TruncateDateTime(now)
-    sun = Sun(float(latitude), float(longitude))
-    sunrise = sun.get_local_sunrise_time(now)
-    sunset = sun.get_local_sunset_time(now)
+    #print("Now: " + str(now_trunc))
+    city = LocationInfo("City", "State", city_name, float(latitude), float(longitude))
+    tz = zoneinfo.ZoneInfo(time_zone)
+    s = sun(city.observer, date=datetime.now(), tzinfo = tz)
+    sunrise = s["sunrise"]
+    sunset = s["sunset"]
     sunrise_trunc = TruncateDateTime(sunrise)
+    #print("Sunrise: " + str(sunrise_trunc))
     sunset_trunc = TruncateDateTime(sunset)
+    #print("Sunset: " + str(sunset_trunc))
     shining = now_trunc > sunrise_trunc and now_trunc < sunset_trunc
     #print(shining)
     return shining, sunrise_trunc, sunset_trunc, now_trunc
-
 
 def TruncateDateTime(dt):
     return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
@@ -483,8 +491,8 @@ def ProcessSolar(getData, energy, power, r, g, b):
 def ShouldRun():
     shining, sunrise, sunset, now = SunShining()
     should_run = shining and solarDataJob.should_run
-    print("Is Shining: " + str(shining))
-    print("Should run: " + str(should_run))
+    #print("Is Shining: " + str(shining))
+    #print("Should run: " + str(should_run))
     return should_run
 
 solarDataJob = schedule.every(5).minutes.do(GetSolarData)
